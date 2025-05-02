@@ -12,12 +12,13 @@ namespace ImgHarvestApp
     {
         static readonly HttpClient client = new HttpClient();
         static string baseDir;
-        static string version = "1.0";
+        static string version = "1.1";
         static HashSet<string> visitedUrls = new HashSet<string>();
         static HashSet<string> downloadedImageUrls = new HashSet<string>(); // Track downloaded image URLs
         static string startDomain;
         static bool crawlExternal = false;
         static bool deduplicationEnabled = true; // Deduplication enabled by default
+        static bool useBrowserUserAgent = false;
         static HashSet<string> failedImageDownloads = new HashSet<string>();
         static int totalImagesDownloaded = 0;
         static int totalFailedDownloads = 0;
@@ -43,7 +44,8 @@ namespace ImgHarvestApp
                 else if (arg.StartsWith("-u=")) startUrl = arg.Substring(3);
                 else if (arg.StartsWith("-f=")) filePath = arg.Substring(3);
                 else if (arg.StartsWith("-e")) crawlExternal = true;
-                else if (arg.StartsWith("-ndc")) deduplicationEnabled = false; // Disable deduplication if -no-dedup is passed
+                else if (arg.StartsWith("-ndc")) deduplicationEnabled = false;
+                else if (arg.StartsWith("-bua")) useBrowserUserAgent = true;
             }
 
             PromptBaseDirectory();
@@ -56,8 +58,20 @@ namespace ImgHarvestApp
 
             startDomain = new Uri(startUrl).Host;
 
-            PromptCrawlExternalUrls();
-            PromptDeduplication();
+            if (!args.Contains("-e")) PromptCrawlExternalUrls();
+            if (!args.Contains("-ndc")) PromptDeduplication();
+            if (!args.Contains("-bua")) PromptBrowserUserAgent();
+
+            if (useBrowserUserAgent)
+            {
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+            }
+            else
+            {
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add("User-Agent", "ImgHarvest/" + version);
+            }
 
             stopwatch.Start();
 
@@ -95,14 +109,16 @@ namespace ImgHarvestApp
 
         static void ShowUsage()
         {
-            Console.WriteLine("Usage: ImgHarvest [-u=<website URL>] [-d=<directory path>] [-f=<file path>] [-e] [-no-dedup]");
+            Console.WriteLine("Usage: ImgHarvest [-u=<website URL>] [-d=<directory path>] [-f=<file path>] [-e] [-no-dedup] [-bua]");
             Console.WriteLine("  -u=<website URL>  The URL of the website to crawl.");
             Console.WriteLine("  -d=<directory>    The directory to save images (default: C:\\ImgHarvest).");
             Console.WriteLine("  -f=<file path>    The path to a text file containing a list of URLs to crawl. Each URL should be on a new line.");
             Console.WriteLine("  -e                Enable crawling of external URLs.");
             Console.WriteLine("  -ndc              Disable deduplication of downloaded images.");
+            Console.WriteLine("  -bua              Use a browser-like User-Agent to help fix 406 errors on some websites.");
             Console.WriteLine("  -h                Show this help message.");
         }
+
 
         static void PromptBaseDirectory()
         {
@@ -132,6 +148,12 @@ namespace ImgHarvestApp
             Console.Write("Enable deduplication to avoid duplicate image downloads? (y/n, default: y): ");
             var dedupChoice = Console.ReadLine()?.ToLower();
             deduplicationEnabled = dedupChoice != "n";
+        }
+        static void PromptBrowserUserAgent()
+        {
+            Console.Write("Use browser-like User-Agent? (helps fix 406 errors on some sites) (y/n, default: n): ");
+            var userAgentChoice = Console.ReadLine()?.ToLower();
+            useBrowserUserAgent = userAgentChoice != "n";
         }
 
         static async Task CrawlPage(string url, string baseDir)
