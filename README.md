@@ -12,7 +12,7 @@ A messy but functional web scraper that downloads images from a given website. I
 ## How to Use
 Run it from the command line. It takes arguments but will prompt for any missing ones:
 ```
-ImgHarvest [-u=<website URL>] [-d=<directory path>] [-f=<file path>] [-e] [-ndc]
+ImgHarvest [-u=<website URL>] [-d=<directory path>] [-f=<file path>] [-e] [-ndc] [-bua]
 ```
 
 ### Options:
@@ -21,6 +21,7 @@ ImgHarvest [-u=<website URL>] [-d=<directory path>] [-f=<file path>] [-e] [-ndc]
 - `-f=<file path>` → File with list of URLs.
 - `-e` → Crawl external links too.
 - `-ndc` → No deduplication (download everything, even duplicates).
+- `-bua` → Use a browser-like User-Agent to help fix 406 errors on some websites.
 
 ## Example Usage
 ```
